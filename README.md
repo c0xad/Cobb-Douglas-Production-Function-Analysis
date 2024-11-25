@@ -69,7 +69,7 @@ The project follows a modular architecture with two main components:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/cobb-douglas-analysis.git
+git clone https://github.com/c0xad/cobb-douglas-analysis.git
 cd cobb-douglas-analysis
 ```
 
@@ -136,18 +136,6 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Citation
-If you use this code in your research, please cite:
-```bibtex
-@software{cobb_douglas_analysis,
-  author = {Your Name},
-  title = {Advanced Cobb-Douglas Production Function Analysis},
-  year = {2023},
-  publisher = {GitHub},
-  url = {https://github.com/yourusername/cobb-douglas-analysis}
-}
-```
 
 ## Acknowledgments
 - World Bank for providing the economic data through their API
