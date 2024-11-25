@@ -11,3 +11,6 @@ pytest>=7.0.0
 black>=22.0.0
 isort>=5.10.0
 pylint>=2.15.0
+requests>=2.26.0
+linearmodels>=4.25.0
+xmltodict>=0.13.0
