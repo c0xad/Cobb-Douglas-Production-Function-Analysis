@@ -5,13 +5,21 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
 
 ## Core Components
 
-### 1. Production Function Analysis (`cobb_douglas.py`, `advanced_production.py`)
+### 1. Production Function Analysis (`cobb_douglas.py`, `advanced_production.py`, `production_models.py`)
 - **Multiple Production Function Specifications**:
   - Traditional Cobb-Douglas with variable returns to scale
-  - Translog Production Function for flexible functional form
+  - Translog Production Function with time-varying parameters
+    - Flexible input substitution patterns
+    - Cross-input interaction effects
+    - Time-varying technological change
   - CES (Constant Elasticity of Substitution) with nested structures
-  - Leontief Production Function with fixed proportions
-  - VES (Variable Elasticity of Substitution) models
+  - Hybrid Models
+    - Cobb-Douglas-CES combinations
+    - Flexible parameter specifications
+  - Trade-Focused Models
+    - Heckscher-Ohlin inspired specifications
+    - Stolper-Samuelson elasticity analysis
+    - Factor price equalization implications
 - **Estimation Methods**:
   - Ordinary Least Squares (OLS) with robust standard errors
   - Robust Regression (RLM) for outlier resistance
@@ -26,7 +34,31 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
   - Technical change incorporation
   - Spatial dependence modeling
 
-### 2. Panel Data Analysis (`panel_analysis.py`)
+### 2. Dynamic Time-Series Analysis (`dynamic_models.py`)
+- **Vector Autoregression (VAR) Models**:
+  - Comprehensive lag structure analysis
+  - Granger causality testing
+  - Impulse response functions
+  - Variance decomposition
+  - Seasonal adjustment capabilities
+- **Vector Error Correction Models (VECM)**:
+  - Cointegration analysis
+  - Long-run equilibrium relationships
+  - Adjustment speed estimation
+  - Error correction mechanisms
+- **Markov Switching Models**:
+  - Multi-regime productivity analysis
+  - Time-varying parameters
+  - Regime-specific variances
+  - Transition probability estimation
+  - Smoothed state probabilities
+- **Advanced TFP Analysis**:
+  - Solow residual decomposition
+  - Törnqvist productivity index
+  - Regime-dependent productivity
+  - Input-specific contributions
+
+### 3. Panel Data Analysis (`panel_analysis.py`)
 - **Model Specifications**:
   - Fixed Effects (One-way and Two-way)
   - Random Effects with GLS estimation
@@ -46,7 +78,7 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
   - Interactive fixed effects
   - Time-varying coefficients
 
-### 3. Frontier Analysis (`frontier_analysis.py`)
+### 4. Frontier Analysis (`frontier_analysis.py`)
 - **Efficiency Analysis Methods**:
   - Stochastic Frontier Analysis (SFA)
     - Time-invariant and time-varying efficiency
@@ -72,7 +104,7 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
   - Dynamic efficiency measurement
   - Productivity change decomposition
 
-### 4. TFP Decomposition (`tfp_analysis.py`)
+### 5. TFP Decomposition (`tfp_analysis.py`)
 - **Decomposition Methods**:
   - Solow Residual calculation
   - Malmquist Productivity Index
@@ -97,7 +129,7 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
     - Production experience
     - Knowledge spillovers
 
-### 5. Advanced Production Models (`advanced_production.py`)
+### 6. Advanced Production Models (`advanced_production.py`)
 - **Specialized Production Functions**:
   - Nested CES functions
   - Flexible functional forms
@@ -114,7 +146,7 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
   - Scope economies estimation
   - Technical substitution rates
 
-### 6. Data Management (`data_fetcher.py`, `data_cleaning.py`)
+### 7. Data Management (`data_fetcher.py`, `data_cleaning.py`)
 - **Data Sources Integration**:
   - World Bank API (`wbgapi`)
     - Comprehensive economic indicators
@@ -145,6 +177,83 @@ This comprehensive econometric analysis framework combines cutting-edge methodol
   - Automated reporting
     - Quality metrics
     - Issue identification
+
+### 8. Hierarchical and Multilevel Analysis (`hierarchical_models.py`)
+- **Bayesian Hierarchical Models**:
+  - Nested random effects structures
+  - Cross-level interactions
+  - Variance component decomposition
+  - Posterior predictive checks
+- **Advanced Model Features**:
+  - Time-varying parameters
+  - Group-specific effects
+  - Heterogeneous coefficients
+  - Non-linear relationships
+- **Productivity Analysis**:
+  - Multilevel TFP decomposition
+  - Sector-specific growth patterns
+  - Country-level heterogeneity
+  - Regional convergence patterns
+- **Model Diagnostics**:
+  - MCMC convergence checks
+  - Information criteria (WAIC, LOO)
+  - Cross-validation methods
+  - Posterior predictive analysis
+
+### 9. Advanced TFP Analysis (`advanced_tfp.py`)
+- **Scale Effects Analysis**:
+  - Non-parametric scale elasticity estimation
+  - Local linear regression techniques
+  - Increasing returns testing
+  - Scale-biased technical change
+- **Technical Diffusion**:
+  - Spatial Durbin models
+  - Direct and indirect effects
+  - Network-based spillover analysis
+  - Technology diffusion paths
+- **Knowledge Spillovers**:
+  - R&D stock calculation
+  - Patent citation analysis
+  - Technological proximity measures
+  - Knowledge production function
+- **Learning Effects**:
+  - Experience accumulation
+  - Learning curve estimation
+  - Input-specific learning rates
+  - Time-varying learning patterns
+- **Technology Gap Analysis**:
+  - Frontier estimation
+  - Convergence patterns
+  - Half-life calculations
+  - Beta-convergence testing
+- **Comprehensive Diagnostics**:
+  - Model specification tests
+  - Heteroskedasticity analysis
+  - Serial correlation detection
+  - Normality testing
+- **Input-Specific Efficiency**:
+  - Partial productivity measures
+  - Input-specific frontiers
+  - Technical change decomposition
+  - Catch-up effect analysis
+- **Spillover Networks**:
+  - Directed technology flows
+  - Centrality analysis
+  - Clustering patterns
+  - Network diagnostics
+
+### 10. Data Augmentation
+The `data_augmentation.py` module provides advanced methods for generating synthetic productivity datasets based on real-world patterns:
+
+- **GAN-based Augmentation**: Uses generative adversarial networks to create synthetic data that preserves the statistical properties of the original dataset
+- **Copula-based Methods**: Maintains complex dependency structures between variables while generating new samples
+- **Bootstrap Augmentation**: Implements smoothed bootstrap sampling with noise injection
+
+Key features:
+- Multiple augmentation approaches (GAN, Copula, Bootstrap)
+- Automatic validation of synthetic data quality
+- Preservation of statistical properties and correlations
+- GPU acceleration support for GAN training
 
 ## Technical Architecture
 
@@ -189,6 +298,7 @@ project_root/
 │   ├── data_fetcher.py          # Data acquisition interface
 │   ├── data_sources.py          # Data source configurations
 │   ├── frontier_analysis.py     # Efficiency frontier analysis
+│   ├── hierarchical_models.py   # Hierarchical and multilevel models
 │   ├── panel_analysis.py        # Panel data estimation tools
 │   ├── tfp_analysis.py          # TFP decomposition methods
 │   └── utils/
@@ -381,4 +491,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Documentation
 For detailed documentation, tutorials, and API reference, visit our [documentation page](https://economic-production-analysis.readthedocs.io/).
-

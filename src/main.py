@@ -3,18 +3,75 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from advanced_production import AdvancedProductionFunctions
 from tfp_analysis import TFPDecomposition, EndogenousGrowthModel
+from hierarchical_models import HierarchicalResults
 import seaborn as sns
 from typing import Dict
 import logging
+import wbgapi as wb
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+class DataFetcher:
+    def __init__(self, countries: list, start_year: int, end_year: int):
+        self.countries = countries
+        self.start_year = start_year
+        self.end_year = end_year
+        self.indicators = {
+            'gdp': 'NY.GDP.MKTP.KD',
+            'labor': 'SL.TLF.TOTL.IN',
+            'capital': 'NE.GDI.FTOT.KD',
+            'rnd': 'GB.XPD.RSDV.GD.ZS',
+            'human_capital': 'SE.TER.ENRR'
+        }
+    
+    def fetch_data(self) -> pd.DataFrame:
+        """Fetch and process World Bank data"""
+        data_frames = []
+        
+        for indicator_name, indicator_code in self.indicators.items():
+            try:
+                # Fetch data using wbgapi
+                df = wb.data.DataFrame(
+                    indicator_code,
+                    self.countries,
+                    time=range(self.start_year, self.end_year + 1),
+                    labels=True
+                )
+                
+                # Clean and reshape data
+                df = df.reset_index()
+                df = df.melt(
+                    id_vars=['time'],
+                    var_name='country',
+                    value_name=indicator_name
+                )
+                data_frames.append(df)
+                
+            except Exception as e:
+                logger.error(f"Error fetching {indicator_name}: {str(e)}")
+                continue
+        
+        if not data_frames:
+            raise ValueError("No data could be fetched")
+        
+        # Merge all indicators
+        final_data = data_frames[0]
+        for df in data_frames[1:]:
+            final_data = final_data.merge(
+                df, on=['time', 'country'], how='outer'
+            )
+        
+        # Clean and process
+        final_data = final_data.sort_values(['country', 'time'])
+        final_data = final_data.dropna()
+        
+        return final_data
+
 def generate_synthetic_data(n_samples: int = 100, n_sectors: int = 3) -> pd.DataFrame:
-    """Generate synthetic data for economic analysis"""
+    """Generate synthetic data if real data fetching fails"""
     np.random.seed(42)
     
-    # Time periods
     time = np.arange(n_samples)
     sectors = [f"Sector_{i}" for i in range(n_sectors)]
     
@@ -23,18 +80,16 @@ def generate_synthetic_data(n_samples: int = 100, n_sectors: int = 3) -> pd.Data
         # Base productivity trends
         a_trend = 0.02 + np.random.normal(0, 0.005)
         
-        # Generate inputs with sector-specific trends
+        # Generate inputs
         labor = np.exp(np.random.normal(0, 0.3, n_samples) + 0.015 * time)
         capital = np.exp(np.random.normal(0, 0.25, n_samples) + 0.02 * time)
-        
-        # R&D and human capital components
         rnd_expenditure = np.exp(np.random.normal(-1, 0.5, n_samples) + 0.03 * time)
         human_capital = np.exp(np.random.normal(0, 0.2, n_samples) + 0.01 * time)
         
         # Technology level with R&D effects
         technology = np.exp(a_trend * time + 0.1 * np.log(rnd_expenditure))
         
-        # Generate output with all components
+        # Generate output
         output = (technology * 
                  (labor ** 0.4) * 
                  (capital ** 0.35) * 
@@ -61,219 +116,160 @@ def generate_synthetic_data(n_samples: int = 100, n_sectors: int = 3) -> pd.Data
     
     return pd.DataFrame(data)
 
-def run_production_analysis(data: pd.DataFrame) -> Dict:
-    """Run comprehensive production function analysis"""
-    logger.info("Starting production function analysis...")
+def run_data_collection():
+    """Run data collection with fallback to synthetic data"""
+    logger.info("Starting data collection...")
     
     try:
-        # Initialize production function analyzer
-        prod_analyzer = AdvancedProductionFunctions(data)
-        
-        # Estimate Leontief production function
-        leontief_results = prod_analyzer.estimate_leontief('output', 'labor', 'capital')
-        
-        # Ensure data is valid for CES estimation
-        data_valid = data[['output', 'labor', 'capital', 'time']].notna().all().all()
-        if not data_valid:
-            raise ValueError("Missing values detected in input data")
-        
-        # Estimate dynamic CES production function
-        ces_results = prod_analyzer.estimate_dynamic_ces(
-            'output', 'labor', 'capital', 'time',
-            sectors=data['sector'].unique().tolist()
-        )
-        
-        # Calculate marginal products
-        mp_results = prod_analyzer.calculate_marginal_products(
-            'output', 'labor', 'capital',
-            model_type='ces', time_var='time'
-        )
-        
-        # Test returns to scale
-        rts_results = prod_analyzer.test_returns_to_scale(
-            'output', 'labor', 'capital',
-            model_type='ces', time_var='time'
-        )
-        
-        return {
-            'leontief': leontief_results,
-            'ces': ces_results,
-            'marginal_products': mp_results,
-            'returns_to_scale': rts_results
-        }
-    except Exception as e:
-        logger.error(f"Error in production analysis: {str(e)}")
-        return {
-            'error': str(e)
-        }
-
-def run_tfp_analysis(data: pd.DataFrame) -> Dict:
-    """Run TFP decomposition analysis"""
-    logger.info("Starting TFP decomposition analysis...")
+        # Try to fetch real data
+        countries = ['USA', 'JPN', 'DEU', 'GBR', 'FRA']
+        fetcher = DataFetcher(countries, 2000, 2022)
+        data = fetcher.fetch_data()
+        logger.info("Successfully fetched real data")
+        return data
     
-    try:
-        # Initialize TFP analyzer
-        tfp_analyzer = TFPDecomposition(data)
-        
-        # Calculate Malmquist productivity index
-        tfp_components = tfp_analyzer.malmquist_index(
-            'output',
-            ['labor', 'capital'],
-            'time'
-        )
-        
-        # Visualize decomposition
-        tfp_plot = tfp_analyzer.visualize_decomposition(tfp_components, 'time')
-        plt.savefig('tfp_decomposition.png')
-        plt.close()
-        
-        return {
-            'components': tfp_components,
-            'plot_saved': 'tfp_decomposition.png'
-        }
     except Exception as e:
-        logger.error(f"Error in TFP analysis: {str(e)}")
-        return {
-            'error': str(e)
-        }
+        logger.warning(f"Failed to fetch real data: {str(e)}")
+        logger.info("Falling back to synthetic data")
+        return generate_synthetic_data()
 
-def run_growth_analysis(data: pd.DataFrame) -> Dict:
-    """Run endogenous growth analysis"""
-    logger.info("Starting endogenous growth analysis...")
+def run_analyses(data: pd.DataFrame) -> Dict:
+    """Run all analyses"""
+    results = {}
     
-    try:
-        # Initialize growth model analyzer
-        growth_analyzer = EndogenousGrowthModel(data)
-        
-        # Estimate R&D model
-        rnd_results = growth_analyzer.estimate_rnd_model(
-            'output',
-            'labor',
-            'capital',
-            'rnd_expenditure',
-            'human_capital'
-        )
-        
-        # Analyze convergence
-        convergence_results = growth_analyzer.analyze_convergence(
-            'output_per_capita',
-            'output',
-            'human_capital',
-            'rnd_intensity'
-        )
-        
-        # Visualize growth patterns
-        growth_plot = growth_analyzer.visualize_growth_patterns(
-            'output_per_capita',
-            'rnd_intensity',
-            'human_capital',
-            'time'
-        )
-        plt.savefig('growth_patterns.png')
-        plt.close()
-        
-        return {
-            'rnd_model': rnd_results,
-            'convergence': convergence_results,
-            'plot_saved': 'growth_patterns.png'
-        }
-    except Exception as e:
-        logger.error(f"Error in growth analysis: {str(e)}")
-        return {
-            'error': str(e)
-        }
+    # Production function analysis
+    prod_analyzer = AdvancedProductionFunctions(data)
+    results['production'] = {
+        'leontief': prod_analyzer.estimate_leontief('output', 'labor', 'capital'),
+        'ces': prod_analyzer.estimate_dynamic_ces('output', 'labor', 'capital', 'time',
+                                                sectors=data['sector'].unique().tolist())
+    }
+    
+    # TFP analysis
+    tfp_analyzer = TFPDecomposition(data)
+    results['tfp'] = {
+        'components': tfp_analyzer.malmquist_index('output', ['labor', 'capital'], 'time')
+    }
+    
+    # Growth analysis
+    growth_analyzer = EndogenousGrowthModel(data)
+    results['growth'] = {
+        'rnd_model': growth_analyzer.estimate_rnd_model('output', 'labor', 'capital',
+                                                      'rnd_expenditure', 'human_capital'),
+        'convergence': growth_analyzer.analyze_convergence('output_per_capita', 'output',
+                                                         'human_capital', 'rnd_intensity')
+    }
+    
+    # Hierarchical analysis
+    hierarchical_analyzer = HierarchicalResults(data)
+    results['hierarchical'] = {
+        'sector_effects': hierarchical_analyzer.estimate_sector_effects('output', ['labor', 'capital', 'rnd_expenditure']),
+        'time_effects': hierarchical_analyzer.estimate_time_effects('output_per_capita')
+    }
+    
+    return results
 
-def visualize_sector_comparison(data: pd.DataFrame):
-    """Create comparative visualizations across sectors"""
+def create_visualizations(data: pd.DataFrame, results: Dict):
+    """Create and save all visualizations"""
+    # Create output directory if it doesn't exist
+    import os
+    os.makedirs('output', exist_ok=True)
+    
+    # Sector comparison plots
     plt.figure(figsize=(15, 10))
     
     # Plot 1: Output per capita trends
     plt.subplot(2, 2, 1)
-    for sector in data['sector'].unique():
-        sector_data = data[data['sector'] == sector]
-        plt.plot(sector_data['time'], sector_data['output_per_capita'], label=sector)
+    sns.lineplot(data=data, x='time', y='output_per_capita', hue='sector')
     plt.title('Output per Capita by Sector')
-    plt.xlabel('Time')
-    plt.ylabel('Output per Capita')
-    plt.legend()
     
     # Plot 2: R&D Intensity
     plt.subplot(2, 2, 2)
     sns.boxplot(data=data, x='sector', y='rnd_intensity')
-    plt.title('R&D Intensity Distribution by Sector')
-    plt.xticks(rotation=45)
+    plt.title('R&D Intensity Distribution')
     
     # Plot 3: Technology Levels
     plt.subplot(2, 2, 3)
-    for sector in data['sector'].unique():
-        sector_data = data[data['sector'] == sector]
-        plt.plot(sector_data['time'], sector_data['technology'], label=sector)
-    plt.title('Technology Level by Sector')
-    plt.xlabel('Time')
-    plt.ylabel('Technology Level')
-    plt.legend()
+    sns.lineplot(data=data, x='time', y='technology', hue='sector')
+    plt.title('Technology Level Evolution')
     
     # Plot 4: Human Capital vs R&D
     plt.subplot(2, 2, 4)
     sns.scatterplot(data=data, x='human_capital', y='rnd_expenditure', hue='sector')
-    plt.title('Human Capital vs R&D Expenditure')
+    plt.title('Human Capital vs R&D Investment')
     
     plt.tight_layout()
-    plt.savefig('sector_comparison.png')
+    plt.savefig('output/sector_analysis.png')
     plt.close()
+
+    # Create hierarchical analysis plots
+    plt.figure(figsize=(15, 5))
+    
+    # Plot 1: Sector Effects
+    plt.subplot(1, 2, 1)
+    sector_effects = results['hierarchical']['sector_effects']
+    sns.barplot(x=sector_effects.index, y=sector_effects.values)
+    plt.title('Sector-Specific Effects')
+    plt.xticks(rotation=45)
+    
+    # Plot 2: Time Effects
+    plt.subplot(1, 2, 2)
+    time_effects = results['hierarchical']['time_effects']
+    sns.lineplot(x=time_effects.index, y=time_effects.values)
+    plt.title('Time Effects on Productivity')
+    
+    plt.tight_layout()
+    plt.savefig('output/hierarchical_analysis.png')
+    plt.close()
+
+def print_summary(results: Dict):
+    """Print summary of analysis results"""
+    print("\nEconomic Analysis Summary")
+    print("========================")
+    
+    print("\n1. Production Function Analysis")
+    print("-----------------------------")
+    print(f"Leontief Technical Coefficients:")
+    print(results['production']['leontief']['parameters'])
+    
+    print("\n2. TFP Analysis")
+    print("-------------")
+    components = results['tfp']['components']
+    print(f"Mean Technical Change: {np.mean(components.technical_change):.3f}")
+    print(f"Mean Efficiency Change: {np.mean(components.efficiency_change):.3f}")
+    
+    print("\n3. Growth Analysis")
+    print("----------------")
+    print(f"Innovation Elasticity: {results['growth']['rnd_model']['innovation_elasticity']:.3f}")
+    print(f"Convergence Rate: {results['growth']['convergence']['beta_convergence']:.3f}")
+    
+    print("\n4. Hierarchical Analysis")
+    print("----------------------")
+    print("Sector Effects Range:")
+    sector_effects = results['hierarchical']['sector_effects']
+    print(f"Min: {sector_effects.min():.3f}, Max: {sector_effects.max():.3f}")
+    print(f"Time Effects Trend: {results['hierarchical']['time_effects'].mean():.3f} (average annual effect)")
 
 def main():
     """Main execution function"""
-    logger.info("Starting economic analysis...")
-    
     try:
-        # Generate synthetic data
-        data = generate_synthetic_data(n_samples=100, n_sectors=3)
-        logger.info(f"Generated synthetic data with shape: {data.shape}")
+        # Data collection
+        data = run_data_collection()
         
-        # Run all analyses
-        production_results = run_production_analysis(data)
-        if 'error' in production_results:
-            logger.warning(f"Production analysis failed: {production_results['error']}")
+        # Run analyses
+        results = run_analyses(data)
         
-        tfp_results = run_tfp_analysis(data)
-        if 'error' in tfp_results:
-            logger.warning(f"TFP analysis failed: {tfp_results['error']}")
+        # Create visualizations
+        create_visualizations(data, results)
         
-        growth_results = run_growth_analysis(data)
-        if 'error' in growth_results:
-            logger.warning(f"Growth analysis failed: {growth_results['error']}")
+        # Print summary
+        print_summary(results)
         
-        # Create sector comparisons
-        try:
-            visualize_sector_comparison(data)
-        except Exception as e:
-            logger.warning(f"Sector comparison visualization failed: {str(e)}")
-        
-        # Print summary results
-        print("\nSummary of Analysis Results:")
-        print("===========================")
-        
-        if 'error' not in production_results:
-            print("\n1. Production Function Analysis:")
-            print(f"- Leontief Technical Coefficients: {production_results['leontief']['parameters']}")
-            print(f"- CES Mean Elasticity: {np.mean([params['elasticity_mean'] for params in production_results['ces'].values()]):.3f}")
-        
-        if 'error' not in tfp_results:
-            print("\n2. TFP Analysis:")
-            print(f"- Mean Technical Change: {np.mean(tfp_results['components'].technical_change):.3f}")
-            print(f"- Mean Efficiency Change: {np.mean(tfp_results['components'].efficiency_change):.3f}")
-        
-        if 'error' not in growth_results:
-            print("\n3. Growth Analysis:")
-            print(f"- Innovation Elasticity: {growth_results['rnd_model']['innovation_elasticity']:.3f}")
-            print(f"- Convergence Rate: {growth_results['convergence']['beta_convergence']:.3f}")
-        
-        logger.info("Analysis complete. Check the output directory for visualization plots.")
+        logger.info("Analysis completed successfully")
         
     except Exception as e:
-        logger.error(f"Main execution failed: {str(e)}")
+        logger.error(f"Error in main execution: {str(e)}")
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()
